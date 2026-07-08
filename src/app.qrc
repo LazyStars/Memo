@@ -1,0 +1,43 @@
+<RCC>
+    <qresource prefix="/">
+        <file>res/logo.ico</file>
+    </qresource>
+
+    <qresource prefix="/btnicon">
+        <file>res/btnicon/minimize.png</file>
+        <file>res/btnicon/minimize-hover.png</file>
+        <file>res/btnicon/minimize-pressed.png</file>
+
+        <file>res/btnicon/close.png</file>
+        <file>res/btnicon/close-hover.png</file>
+        <file>res/btnicon/close-pressed.png</file>
+
+        <file>res/btnicon/pinTop.png</file>
+        <file>res/btnicon/pinTop-checked.png</file>
+        <file>res/btnicon/pinTop-hover.png</file>
+
+        <file>res/btnicon/add.png</file>
+        <file>res/btnicon/add-hover.png</file>
+        <file>res/btnicon/add-pressed.png</file>
+
+        <file>res/btnicon/create_group.png</file>
+        <file>res/btnicon/create_group-hover.png</file>
+        <file>res/btnicon/create_group-pressed.png</file>
+
+        <file>res/btnicon/quick_add.png</file>
+        <file>res/btnicon/quick_add-hover.png</file>
+        <file>res/btnicon/quick_add-pressed.png</file>
+
+        <file>res/btnicon/edit.png</file>
+        <file>res/btnicon/edit-hover.png</file>
+        <file>res/btnicon/edit-pressed.png</file>
+
+        <file>res/btnicon/arrow_down.png</file>
+        <file>res/btnicon/arrow_down-hover.png</file>
+        <file>res/btnicon/arrow_down-pressed.png</file>
+
+        <file>res/btnicon/arrow_up.png</file>
+        <file>res/btnicon/arrow_up-hover.png</file>
+        <file>res/btnicon/arrow_up-pressed.png</file>
+    </qresource>
+</RCC>

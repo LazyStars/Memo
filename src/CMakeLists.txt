@@ -11,6 +11,7 @@ set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 find_package(Qt5 COMPONENTS Core Gui Widgets Network PrintSupport Sql REQUIRED)
 find_package(QLogCollector REQUIRED COMPONENTS Server)
+find_package(QWindowKit COMPONENTS Core Widgets REQUIRED)
 
 #添加宏定义
 add_compile_definitions(CUR_PROJECT_PATH="${CMAKE_CURRENT_SOURCE_DIR}")
@@ -22,7 +23,33 @@ add_executable(${PROJECT_NAME}
         app.cpp
         app.h
         app.ui
-#        app.qrc
+        app.qrc
+
+        database/memogroup.h
+        database/memorecord.h
+        database/memoreminder.h
+        database/memodatabase.h
+        database/memodatabase.cpp
+        database/memorepository.h
+        database/memorepository.cpp
+
+        tools/tray/mysystemtrayicon.h
+        tools/tray/mysystemtrayicon.cpp
+
+        tools/scrollbar/silkyscrollbar.h
+        tools/scrollbar/silkyscrollbar.cpp
+
+        utils/treeview/memotreenode.h
+        utils/treeview/memotreemodel.h
+        utils/treeview/memotreemodel.cpp
+        utils/treeview/memotreedelegate.h
+        utils/treeview/memotreedelegate.cpp
+        utils/treeview/memotreecontroller.h
+        utils/treeview/memotreecontroller.cpp
+        utils/treeview/item/recorditem.h
+        utils/treeview/item/recorditem.cpp
+        utils/treeview/item/groupitem.h
+        utils/treeview/item/groupitem.cpp
 )
 
 target_link_libraries(${PROJECT_NAME}
@@ -34,4 +61,5 @@ target_link_libraries(${PROJECT_NAME}
         Qt5::Sql
 
         QLogCollector::Server
+        QWindowKit::Widgets
 )

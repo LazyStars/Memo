@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>RecordItem</class>
+ <widget class="QWidget" name="RecordItem">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>364</width>
+    <height>120</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>RecordItem</string>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">#RecordItem{
+	background: transparent;
+}
+
+.QLabel{
+	color: rgb(220, 220, 220);
+}</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout">
+     <item>
+      <widget class="QLineEdit" name="lineEdit_title">
+       <property name="text">
+        <string>未命名标题</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="btn_edit">
+       <property name="minimumSize">
+        <size>
+         <width>20</width>
+         <height>20</height>
+        </size>
+       </property>
+       <property name="maximumSize">
+        <size>
+         <width>20</width>
+         <height>20</height>
+        </size>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">.QPushButton{
+	border: none;
+	border-image: url(:/btnicon/res/btnicon/edit.png);
+}
+.QPushButton::hover{
+	border-image: url(:/btnicon/res/btnicon/edit-hover.png);
+}
+.QPushButton::pressed{
+	border-image: url(:/btnicon/res/btnicon/edit-pressed.png);
+}</string>
+       </property>
+       <property name="text">
+        <string/>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <spacer name="horizontalSpacer">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item>
+      <widget class="QLabel" name="label_state">
+       <property name="styleSheet">
+        <string notr="true">.QLabel[skin=&quot;not_started&quot;]{
+	color: rgb(220, 220, 220);
+}
+.QLabel[skin=&quot;completed&quot;]{
+	color: green;
+}
+.QLabel[skin=&quot;planned&quot;]{
+	color: blue;
+}
+.QLabel[skin=&quot;in_progress&quot;]{
+	color: orange;
+}
+.QLabel[skin=&quot;delayed&quot;]{
+	color: red;
+}</string>
+       </property>
+       <property name="text">
+        <string>未完成</string>
+       </property>
+       <property name="skin" stdset="0">
+        <string>not_started</string>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </item>
+   <item>
+    <widget class="QTextEdit" name="textEdit_context"/>
+   </item>
+  </layout>
+ </widget>
+ <resources>
+  <include location="../../../app.qrc"/>
+ </resources>
+ <connections/>
+</ui>

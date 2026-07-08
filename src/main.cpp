@@ -2,16 +2,17 @@
 #include <Windows.h>
 #include <qlogcollector/server/logcollector.h>
 #include <qlogcollector/server/colors/styledstring.h>
-#include <qlogcollector/server/outputs/fileoutputtarget.h>
 #include <qicon.h>
 #include <qdebug.h>
 #include <qfont.h>
 
 #include "app.h"
+#include "database/memodatabase.h"
 
 QLOGCOLLECTOR_USE_NAMESPACE
 
 int main(int argc, char* argv[]) {
+    QGuiApplication::setAttribute(Qt::AA_DontCreateNativeWidgetSiblings);
     QApplication::setAttribute(Qt::AA_EnableHighDpiScaling);
     QApplication::setAttribute(Qt::AA_UseHighDpiPixmaps);
     QApplication a(argc, argv);
@@ -46,13 +47,20 @@ int main(int argc, char* argv[]) {
     qDebug() << styled("------application version:").g() << styled(APP_VERSION, true).g() << styled("------").g();
 
     /**
-     * 应用程序初始化在此处开始
+     * 数据库初始化
      */
+    if (!MemoDatabase::initialize()) {
+        qCritical() << "initialize memo database failed:" << MemoDatabase::lastError()
+                    << "database path:" << MemoDatabase::databasePath();
+        return -1;
+    }
+
     a.setWindowIcon(QIcon(":/res/logo.ico"));
 
     App app;
     app.setWindowTitle("备忘录");
-    app.show();chushihua
+    app.setWindowIcon(QIcon(":/res/logo.ico"));
+    app.show();
 
     return a.exec();
 }

@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>GroupItem</class>
+ <widget class="QWidget" name="GroupItem">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>301</width>
+    <height>41</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>GroupItem</string>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">#GroupItem{
+	background: transparent;
+}
+
+.QLabel{
+	font-color: rgb(220, 220, 220);
+}</string>
+  </property>
+  <layout class="QHBoxLayout" name="horizontalLayout">
+   <property name="spacing">
+    <number>4</number>
+   </property>
+   <property name="leftMargin">
+    <number>4</number>
+   </property>
+   <property name="topMargin">
+    <number>4</number>
+   </property>
+   <property name="rightMargin">
+    <number>4</number>
+   </property>
+   <property name="bottomMargin">
+    <number>4</number>
+   </property>
+   <item>
+    <widget class="QLineEdit" name="lineEdit_group_name">
+     <property name="styleSheet">
+      <string notr="true">.QLineEdit{
+	border: none;
+	background: transparent;
+	border-bottom: 1px solid rgb(220, 220, 220);
+	color: rgb(220, 220, 220);
+}</string>
+     </property>
+     <property name="readOnly">
+      <bool>true</bool>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <spacer name="horizontalSpacer">
+     <property name="orientation">
+      <enum>Qt::Horizontal</enum>
+     </property>
+     <property name="sizeHint" stdset="0">
+      <size>
+       <width>248</width>
+       <height>20</height>
+      </size>
+     </property>
+    </spacer>
+   </item>
+   <item>
+    <widget class="QPushButton" name="btn_add_record">
+     <property name="minimumSize">
+      <size>
+       <width>20</width>
+       <height>20</height>
+      </size>
+     </property>
+     <property name="maximumSize">
+      <size>
+       <width>20</width>
+       <height>20</height>
+      </size>
+     </property>
+     <property name="toolTip">
+      <string>在当前分组新建备忘录</string>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">.QPushButton{
+	border: none;
+	border-image: url(:/btnicon/res/btnicon/add.png);
+}
+.QPushButton::hover{
+	border-image: url(:/btnicon/res/btnicon/add-hover.png);
+}
+.QPushButton::pressed{
+	border-image: url(:/btnicon/res/btnicon/add-pressed.png);
+}</string>
+     </property>
+     <property name="text">
+      <string/>
+     </property>
+    </widget>
+   </item>
+  </layout>
+ </widget>
+ <resources>
+  <include location="../../../app.qrc"/>
+ </resources>
+ <connections/>
+</ui>
