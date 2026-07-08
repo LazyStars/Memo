@@ -39,5 +39,9 @@
         <file>res/btnicon/arrow_up.png</file>
         <file>res/btnicon/arrow_up-hover.png</file>
         <file>res/btnicon/arrow_up-pressed.png</file>
+
+        <file>res/btnicon/set.png</file>
+        <file>res/btnicon/set-hover.png</file>
+        <file>res/btnicon/set-pressed.png</file>
     </qresource>
 </RCC>

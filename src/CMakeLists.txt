@@ -25,6 +25,9 @@ add_executable(${PROJECT_NAME}
         app.ui
         app.qrc
 
+        dialogs/edittextdialog.h
+        dialogs/edittextdialog.cpp
+
         database/memogroup.h
         database/memorecord.h
         database/memoreminder.h

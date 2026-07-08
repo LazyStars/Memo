@@ -7,6 +7,7 @@
 
 class QTreeView;
 class QModelIndex;
+struct MemoReminder;
 
 class MemoTreeController : public QObject
 {
@@ -27,6 +28,13 @@ private:
     void configureTreeView();
     void reloadTree();
     bool renameGroup(qint64 groupId, const QString& groupName);
+    bool loadReminderForRecord(qint64 recordId, MemoReminder* reminder, bool* existed) const;
+    bool openRecordEditor(MemoRecord* record,
+                          MemoReminder* reminder,
+                          bool* shouldPersistReminder,
+                          bool reminderExisted,
+                          bool createMode);
+    bool persistReminderForRecord(const MemoReminder& reminder, bool reminderExisted);
     MemoGroup createGroupDraft() const;
     MemoRecord createRecordDraft(qint64 groupId) const;
 
@@ -35,4 +43,5 @@ private:
     MemoTreeModel* model = nullptr;
     MemoTreeDelegate* delegate = nullptr;
     qint64 pendingEditGroupId = 0;
+    qint64 pendingFocusRecordId = 0;
 };

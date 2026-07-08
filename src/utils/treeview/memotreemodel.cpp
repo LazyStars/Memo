@@ -153,3 +153,22 @@ QModelIndex MemoTreeModel::groupIndex(qint64 groupId) const {
 
     return {};
 }
+
+QModelIndex MemoTreeModel::recordIndex(qint64 recordId) const {
+    for (int groupRow = 0; groupRow < rootNode->childCount(); ++groupRow) {
+        MemoTreeNode* groupNode = rootNode->childAt(groupRow);
+        if (groupNode == nullptr) {
+            continue;
+        }
+
+        for (int recordRow = 0; recordRow < groupNode->childCount(); ++recordRow) {
+            MemoTreeNode* recordNode = groupNode->childAt(recordRow);
+            if (recordNode != nullptr && recordNode->recordData().id == recordId) {
+                const QModelIndex groupIndex = createIndex(groupRow, 0, groupNode);
+                return index(recordRow, 0, groupIndex);
+            }
+        }
+    }
+
+    return {};
+}

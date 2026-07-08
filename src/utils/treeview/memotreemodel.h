@@ -23,6 +23,7 @@ public:
     void rebuild(const QList<MemoGroup>& groups, const QList<MemoRecord>& records);
     MemoTreeNode* nodeFromIndex(const QModelIndex& index) const;
     QModelIndex groupIndex(qint64 groupId) const;
+    QModelIndex recordIndex(qint64 recordId) const;
 
 private:
     MemoTreeNode* rootNode = nullptr;
