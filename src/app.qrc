@@ -4,6 +4,8 @@
     </qresource>
 
     <qresource prefix="/btnicon">
+        <file>res/btnicon/checked.png</file>
+
         <file>res/btnicon/minimize.png</file>
         <file>res/btnicon/minimize-hover.png</file>
         <file>res/btnicon/minimize-pressed.png</file>

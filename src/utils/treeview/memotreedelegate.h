@@ -1,6 +1,7 @@
 #pragma once
 
 #include <qabstractitemmodel.h>
+#include <qcolor.h>
 #include <qstyleditemdelegate.h>
 
 class MemoTreeNode;
@@ -48,9 +49,11 @@ private:
                         const QModelIndex& index,
                         const MemoTreeNode* node) const;
     void paintRecordNode(QPainter* painter,
-                         const QStyleOptionViewItem& option,
-                         const MemoTreeNode* node) const;
+                          const QStyleOptionViewItem& option,
+                          const MemoTreeNode* node) const;
     QString statusText(int status) const;
+    QColor statusTextColor(int status) const;
+    QColor statusBackgroundColor(int status, bool selected) const;
     QString groupArrowIconPath(bool expanded, GroupControl control, const QModelIndex& index) const;
     QString groupAddIconPath(GroupControl control, const QModelIndex& index) const;
     GroupControl controlAt(const QPoint& position, const QRect& itemRect) const;

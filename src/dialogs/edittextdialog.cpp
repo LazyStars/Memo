@@ -3,15 +3,27 @@
 #include <qevent.h>
 #include <qdatetime.h>
 #include <qmessagebox.h>
+#include <qtimer.h>
+#include <QWKWidgets/widgetwindowagent.h>
 
 EditTextDialog::EditTextDialog(QWidget* parent) : QDialog(parent) {
+    setWindowFlags(Qt::FramelessWindowHint);
+    setAttribute(Qt::WA_TranslucentBackground);
     ui.setupUi(this);
+
+    auto agent = new QWK::WidgetWindowAgent(this);
+    agent->setup(this);
+    agent->setTitleBar(ui.widget_title);
+    agent->setSystemButton(QWK::WindowAgentBase::WindowIcon, ui.label_title);
+    agent->setSystemButton(QWK::WindowAgentBase::Close, ui.btn_back);
+    agent->setHitTestVisible(ui.btn_set, true);
 
     ui.lineEdit_timing->setValidator(new QIntValidator(1, 525600, this));
     ui.lineEdit_urge->setValidator(new QIntValidator(1, 525600, this));
     ui.cb_popup->setVisible(false); // 暂未接入持久化能力，本次先隐藏
+    ui.lineEdit_title->installEventFilter(this);
+    ui.textEdit->installEventFilter(this);
 
-    connectSignals();
     switchToContentPage();
     updateTitleCounter();
     updateReminderWidgetsState();
@@ -49,6 +61,10 @@ void EditTextDialog::on_btn_back_clicked() {
     close();
 }
 
+void EditTextDialog::on_btn_return_clicked() {
+    close();
+}
+
 void EditTextDialog::on_btn_confirm_clicked() {
     (void)trySaveAndClose();
 }
@@ -64,6 +80,49 @@ void EditTextDialog::on_btn_save_clicked() {
 void EditTextDialog::on_btn_cancel_clicked() {
     restoreSettingsPageSnapshot();
     switchToContentPage();
+}
+
+void EditTextDialog::on_lineEdit_title_textChanged(const QString& text) {
+    Q_UNUSED(text)
+    updateTitleCounter();
+    updateSavedState();
+}
+
+void EditTextDialog::on_textEdit_textChanged() {
+    updateSavedState();
+}
+
+void EditTextDialog::on_comboBox_state_currentIndexChanged(int index) {
+    Q_UNUSED(index)
+    updateSavedState();
+}
+
+void EditTextDialog::on_cb_timing_toggled(bool checked) {
+    Q_UNUSED(checked)
+    updateReminderWidgetsState();
+    updateSavedState();
+}
+
+void EditTextDialog::on_cb_repeat_toggled(bool checked) {
+    Q_UNUSED(checked)
+    updateReminderWidgetsState();
+    updateSavedState();
+}
+
+void EditTextDialog::on_cb_urge_toggled(bool checked) {
+    Q_UNUSED(checked)
+    updateReminderWidgetsState();
+    updateSavedState();
+}
+
+void EditTextDialog::on_lineEdit_timing_textChanged(const QString& text) {
+    Q_UNUSED(text)
+    updateSavedState();
+}
+
+void EditTextDialog::on_lineEdit_urge_textChanged(const QString& text) {
+    Q_UNUSED(text)
+    updateSavedState();
 }
 
 void EditTextDialog::closeEvent(QCloseEvent* event) {
@@ -82,38 +141,6 @@ void EditTextDialog::closeEvent(QCloseEvent* event) {
 
 void EditTextDialog::reject() {
     close();
-}
-
-void EditTextDialog::connectSignals() {
-    connect(ui.lineEdit_title, &QLineEdit::textChanged, this, [this] {
-        updateTitleCounter();
-        updateSavedState();
-    });
-    connect(ui.textEdit, &QTextEdit::textChanged, this, [this] {
-        updateSavedState();
-    });
-    connect(ui.comboBox_state,
-            QOverload<int>::of(&QComboBox::currentIndexChanged),
-            this,
-            [this](int) { updateSavedState(); });
-    connect(ui.cb_timing, &QCheckBox::toggled, this, [this](bool) {
-        updateReminderWidgetsState();
-        updateSavedState();
-    });
-    connect(ui.cb_repeat, &QCheckBox::toggled, this, [this](bool) {
-        updateReminderWidgetsState();
-        updateSavedState();
-    });
-    connect(ui.cb_urge, &QCheckBox::toggled, this, [this](bool) {
-        updateReminderWidgetsState();
-        updateSavedState();
-    });
-    connect(ui.lineEdit_timing, &QLineEdit::textChanged, this, [this] {
-        updateSavedState();
-    });
-    connect(ui.lineEdit_urge, &QLineEdit::textChanged, this, [this] {
-        updateSavedState();
-    });
 }
 
 void EditTextDialog::initializeDialog(const MemoRecord& record, const MemoReminder* reminder, bool isCreateMode) {
@@ -493,4 +520,26 @@ MemoStatus EditTextDialog::statusForComboIndex(int index) const {
 
 qint64 EditTextDialog::minutesToSeconds(int minutes) const {
     return static_cast<qint64>(qMax(0, minutes)) * 60;
+}
+
+bool EditTextDialog::eventFilter(QObject* watched, QEvent* event) {
+    const bool watchesEditableContent = watched == ui.lineEdit_title || watched == ui.textEdit;
+    if (!watchesEditableContent) {
+        return QDialog::eventFilter(watched, event);
+    }
+
+    switch (event->type()) {
+    case QEvent::KeyRelease:
+    case QEvent::InputMethod:
+    case QEvent::MouseButtonRelease:
+        QTimer::singleShot(0, this, [this] {
+            updateTitleCounter();
+            updateSavedState();
+        });
+        break;
+    default:
+        break;
+    }
+
+    return QDialog::eventFilter(watched, event);
 }

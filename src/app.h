@@ -28,7 +28,7 @@ private slots:
     void on_btn_close_clicked();
 
 private:
-    Ui::App ui;
+    Ui::App ui{};
     MySystemTrayIcon *trayIcon = nullptr;
     QTimer *updateTimer = nullptr;
     MemoTreeController* memoTreeController = nullptr;

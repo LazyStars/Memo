@@ -291,13 +291,13 @@ void MemoTreeDelegate::paintRecordNode(QPainter* painter,
 
     const QRect statusRect(contentRect.right() - 72, contentRect.top() + 8, 60, 20);
     painter->setPen(Qt::NoPen);
-    painter->setBrush(QColor(255, 255, 255, isSelected ? 52 : 36));
+    painter->setBrush(statusBackgroundColor(static_cast<int>(record.status), isSelected));
     painter->drawRoundedRect(statusRect, 10, 10);
 
     QFont statusFont = option.font;
     statusFont.setPointSize(qMax(8, statusFont.pointSize() - 1));
     painter->setFont(statusFont);
-    painter->setPen(QColor(236, 239, 244));
+    painter->setPen(statusTextColor(static_cast<int>(record.status)));
     painter->drawText(statusRect, Qt::AlignCenter, statusText(static_cast<int>(record.status)));
 
     QFont bodyFont = option.font;
@@ -325,6 +325,47 @@ QString MemoTreeDelegate::statusText(int status) const {
     default:
         return QStringLiteral("未开始");
     }
+}
+
+QColor MemoTreeDelegate::statusTextColor(int status) const {
+    switch (static_cast<MemoStatus>(status)) {
+    case MemoStatus::InProgress:
+        return QColor(246, 248, 252);
+    case MemoStatus::Completed:
+        return QColor(119, 214, 138);
+    case MemoStatus::Planned:
+        return QColor(125, 183, 255);
+    case MemoStatus::TimedOut:
+        return QColor(255, 123, 123);
+    case MemoStatus::NotStarted:
+    default:
+        return QColor(176, 184, 196);
+    }
+}
+
+QColor MemoTreeDelegate::statusBackgroundColor(int status, bool selected) const {
+    QColor color;
+    switch (static_cast<MemoStatus>(status)) {
+    case MemoStatus::InProgress:
+        color = QColor(246, 248, 252);
+        break;
+    case MemoStatus::Completed:
+        color = QColor(119, 214, 138);
+        break;
+    case MemoStatus::Planned:
+        color = QColor(125, 183, 255);
+        break;
+    case MemoStatus::TimedOut:
+        color = QColor(255, 123, 123);
+        break;
+    case MemoStatus::NotStarted:
+    default:
+        color = QColor(176, 184, 196);
+        break;
+    }
+
+    color.setAlpha(selected ? 48 : 32);
+    return color;
 }
 
 QString MemoTreeDelegate::groupArrowIconPath(bool expanded,

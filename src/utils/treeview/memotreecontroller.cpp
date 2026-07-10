@@ -242,7 +242,7 @@ bool MemoTreeController::openRecordEditor(MemoRecord* record,
         return false;
     }
 
-    EditTextDialog dialog(treeView);
+    EditTextDialog dialog(nullptr);
     if (createMode) {
         dialog.setupForCreate(*record);
     } else {

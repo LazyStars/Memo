@@ -26,9 +26,18 @@ public:
 private slots:
     void on_btn_set_clicked();
     void on_btn_back_clicked();
+    void on_btn_return_clicked();
     void on_btn_confirm_clicked();
     void on_btn_save_clicked();
     void on_btn_cancel_clicked();
+    void on_lineEdit_title_textChanged(const QString& text);
+    void on_textEdit_textChanged();
+    void on_comboBox_state_currentIndexChanged(int index);
+    void on_cb_timing_toggled(bool checked);
+    void on_cb_repeat_toggled(bool checked);
+    void on_cb_urge_toggled(bool checked);
+    void on_lineEdit_timing_textChanged(const QString& text);
+    void on_lineEdit_urge_textChanged(const QString& text);
 
 private:
     struct DialogState {
@@ -46,7 +55,6 @@ private:
     void closeEvent(QCloseEvent* event) override;
     void reject() override;
 
-    void connectSignals();
     void initializeDialog(const MemoRecord& record, const MemoReminder* reminder, bool createMode);
     void applyStateToUi(const DialogState& state);
     void captureSettingsPageSnapshot();
@@ -69,8 +77,11 @@ private:
     MemoStatus statusForComboIndex(int index) const;
     qint64 minutesToSeconds(int minutes) const;
 
+protected:
+    bool eventFilter(QObject* watched, QEvent* event) override;
+
 private:
-    Ui::EditTextDialog ui;
+    Ui::EditTextDialog ui{};
     MemoRecord sourceRecord;
     MemoReminder sourceReminder;
     MemoRecord outputRecord;
