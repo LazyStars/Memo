@@ -15,11 +15,13 @@ class MemoRepository
 public:
     static bool addGroup(const MemoGroup& group, qint64* insertedId = nullptr);
     static bool updateGroup(const MemoGroup& group);
+    static bool deleteGroup(qint64 groupId);
     static bool getDefaultGroup(MemoGroup* group);
     static QList<MemoGroup> listGroups();
 
     static bool addRecord(const MemoRecord& record, qint64* insertedId = nullptr);
     static bool updateRecord(const MemoRecord& record);
+    static bool deleteRecord(qint64 recordId, qint64 deletedAt);
     static bool getRecordById(qint64 id, MemoRecord* record);
     static QList<MemoRecord> listRecords(bool includeDeleted = false);
 

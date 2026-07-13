@@ -3,11 +3,13 @@
 #include "database/memorepository.h"
 #include "dialogs/edittextdialog.h"
 #include "tools/scrollbar/silkyscrollbar.h"
+#include "utils/menu/memomenu.h"
 
 #include <qabstractitemview.h>
 #include <qdatetime.h>
 #include <qdebug.h>
 #include <qheaderview.h>
+#include <qmessagebox.h>
 #include <qtreeview.h>
 #include <qwidget.h>
 
@@ -15,6 +17,7 @@ MemoTreeController::MemoTreeController(QTreeView* treeViewWidget, QObject* paren
     : QObject(parent), treeView(treeViewWidget) {
     model = new MemoTreeModel(this);
     delegate = new MemoTreeDelegate(this);
+    contextMenu = new MemoMenu(treeView);
 }
 
 void MemoTreeController::initialize() {
@@ -27,6 +30,20 @@ void MemoTreeController::initialize() {
         }
     });
     connect(treeView, &QTreeView::doubleClicked, this, &MemoTreeController::onTreeItemDoubleClicked);
+    connect(treeView, &QTreeView::customContextMenuRequested,
+            this, &MemoTreeController::onTreeContextMenuRequested);
+    connect(contextMenu, &MemoMenu::requestAddRecord, this, &MemoTreeController::addRecordToGroup);
+    connect(contextMenu, &MemoMenu::requestRenameGroup, this, &MemoTreeController::beginRenameGroup);
+    connect(contextMenu, &MemoMenu::requestDeleteGroup, this, &MemoTreeController::deleteGroup);
+    connect(contextMenu, &MemoMenu::requestEditRecord, this, &MemoTreeController::editRecord);
+    connect(contextMenu, &MemoMenu::requestChangeRecordStatus,
+            this, &MemoTreeController::changeRecordStatus);
+    connect(contextMenu, &MemoMenu::requestMoveRecord, this, &MemoTreeController::moveRecord);
+    connect(contextMenu, &MemoMenu::requestDeleteRecord, this, &MemoTreeController::deleteRecord);
+    reloadTree();
+}
+
+void MemoTreeController::refresh() {
     reloadTree();
 }
 
@@ -95,12 +112,55 @@ void MemoTreeController::onTreeItemDoubleClicked(const QModelIndex& index) {
         return;
     }
 
-    MemoRecord record = node->recordData();
+    editRecord(node->recordData().id);
+}
+
+void MemoTreeController::onTreeContextMenuRequested(const QPoint& position) {
+    const QModelIndex index = treeView->indexAt(position);
+    if (!index.isValid()) {
+        return;
+    }
+
+    MemoTreeNode* node = model->nodeFromIndex(index);
+    if (node == nullptr || contextMenu == nullptr) {
+        return;
+    }
+
+    treeView->setCurrentIndex(index);
+    const QPoint globalPosition = treeView->viewport()->mapToGlobal(position);
+    if (node->type() == MemoTreeNodeType::Group) {
+        contextMenu->showForGroup(node->groupData(), node->childCount() > 0, globalPosition);
+        return;
+    }
+
+    if (node->type() == MemoTreeNodeType::Record) {
+        contextMenu->showForRecord(node->recordData(), MemoRepository::listGroups(), globalPosition);
+    }
+}
+
+void MemoTreeController::beginRenameGroup(qint64 groupId) {
+    if (groupId <= 0) {
+        return;
+    }
+
+    const QModelIndex groupIndex = model->groupIndex(groupId);
+    if (groupIndex.isValid()) {
+        treeView->setCurrentIndex(groupIndex);
+        treeView->edit(groupIndex);
+    }
+}
+
+void MemoTreeController::editRecord(qint64 recordId) {
+    MemoRecord record;
+    if (recordId <= 0 || !MemoRepository::getRecordById(recordId, &record) || record.deleted) {
+        showRepositoryError(QStringLiteral("读取记录失败"));
+        return;
+    }
+
     MemoReminder reminder;
     bool reminderExisted = false;
     if (!loadReminderForRecord(record.id, &reminder, &reminderExisted)) {
-        qWarning() << "load memo reminder failed, record id:" << record.id
-                   << "error:" << MemoRepository::lastError();
+        showRepositoryError(QStringLiteral("读取记录提醒失败"));
         return;
     }
 
@@ -110,18 +170,159 @@ void MemoTreeController::onTreeItemDoubleClicked(const QModelIndex& index) {
     }
 
     if (!MemoRepository::updateRecord(record)) {
-        qWarning() << "update memo record failed, record id:" << record.id
-                   << "error:" << MemoRepository::lastError();
+        showRepositoryError(QStringLiteral("保存记录失败"));
         return;
     }
 
     if (shouldPersistReminder && !persistReminderForRecord(reminder, reminderExisted)) {
-        qWarning() << "update memo reminder failed, record id:" << record.id
-                   << "error:" << MemoRepository::lastError();
+        showRepositoryError(QStringLiteral("保存记录提醒失败"));
     }
 
     pendingFocusRecordId = record.id;
     reloadTree();
+}
+
+void MemoTreeController::changeRecordStatus(qint64 recordId, MemoStatus status) {
+    MemoRecord record;
+    if (recordId <= 0 || !MemoRepository::getRecordById(recordId, &record) || record.deleted) {
+        showRepositoryError(QStringLiteral("读取记录失败"));
+        return;
+    }
+
+    if (record.status == status) {
+        return;
+    }
+
+    record.status = status;
+    record.updatedAt = QDateTime::currentSecsSinceEpoch();
+    record.completedAt = status == MemoStatus::Completed ? record.updatedAt : 0;
+    if (!MemoRepository::updateRecord(record)) {
+        showRepositoryError(QStringLiteral("更新记录状态失败"));
+        return;
+    }
+
+    pendingFocusRecordId = record.id;
+    reloadTree();
+}
+
+void MemoTreeController::moveRecord(qint64 recordId, qint64 targetGroupId) {
+    if (recordId <= 0 || targetGroupId <= 0) {
+        return;
+    }
+
+    MemoRecord record;
+    if (!MemoRepository::getRecordById(recordId, &record) || record.deleted) {
+        showRepositoryError(QStringLiteral("读取记录失败"));
+        return;
+    }
+
+    if (record.groupId == targetGroupId) {
+        return;
+    }
+
+    bool targetGroupExists = false;
+    for (const MemoGroup& group : MemoRepository::listGroups()) {
+        if (group.id == targetGroupId) {
+            targetGroupExists = true;
+            break;
+        }
+    }
+    if (!targetGroupExists) {
+        QMessageBox::warning(treeView, QStringLiteral("移动记录失败"), QStringLiteral("目标分组不存在。"));
+        return;
+    }
+
+    record.groupId = targetGroupId;
+    record.updatedAt = QDateTime::currentSecsSinceEpoch();
+    if (!MemoRepository::updateRecord(record)) {
+        showRepositoryError(QStringLiteral("移动记录失败"));
+        return;
+    }
+
+    pendingFocusRecordId = record.id;
+    reloadTree();
+}
+
+void MemoTreeController::deleteRecord(qint64 recordId) {
+    if (recordId <= 0) {
+        return;
+    }
+
+    const QMessageBox::StandardButton button = QMessageBox::question(
+        treeView,
+        QStringLiteral("删除记录"),
+        QStringLiteral("确定要删除这条记录吗？"),
+        QMessageBox::Yes | QMessageBox::Cancel,
+        QMessageBox::Cancel);
+    if (button != QMessageBox::Yes) {
+        return;
+    }
+
+    if (!MemoRepository::deleteRecord(recordId, QDateTime::currentSecsSinceEpoch())) {
+        showRepositoryError(QStringLiteral("删除记录失败"));
+        return;
+    }
+
+    reloadTree();
+}
+
+void MemoTreeController::deleteGroup(qint64 groupId) {
+    if (groupId <= 0) {
+        return;
+    }
+
+    MemoGroup groupToDelete;
+    bool groupExists = false;
+    for (const MemoGroup& group : MemoRepository::listGroups()) {
+        if (group.id == groupId) {
+            groupToDelete = group;
+            groupExists = true;
+            break;
+        }
+    }
+    if (!groupExists) {
+        QMessageBox::warning(treeView, QStringLiteral("删除分组失败"), QStringLiteral("分组不存在。"));
+        return;
+    }
+
+    if (groupToDelete.isDefault) {
+        QMessageBox::information(treeView, QStringLiteral("删除分组"), QStringLiteral("默认分组不能删除。"));
+        return;
+    }
+
+    for (const MemoRecord& record : MemoRepository::listRecords()) {
+        if (record.groupId == groupId) {
+            QMessageBox::information(treeView,
+                                     QStringLiteral("删除分组"),
+                                     QStringLiteral("请先移动或删除分组中的记录。"));
+            return;
+        }
+    }
+
+    const QMessageBox::StandardButton button = QMessageBox::question(
+        treeView,
+        QStringLiteral("删除分组"),
+        QStringLiteral("确定要删除空分组“%1”吗？").arg(groupToDelete.name),
+        QMessageBox::Yes | QMessageBox::Cancel,
+        QMessageBox::Cancel);
+    if (button != QMessageBox::Yes) {
+        return;
+    }
+
+    if (!MemoRepository::deleteGroup(groupId)) {
+        showRepositoryError(QStringLiteral("删除分组失败"));
+        return;
+    }
+
+    reloadTree();
+}
+
+void MemoTreeController::showRepositoryError(const QString& operation) const {
+    const QString error = MemoRepository::lastError();
+    qWarning() << operation << error;
+    QMessageBox::warning(treeView,
+                         operation,
+                         error.isEmpty() ? QStringLiteral("目标已不存在或不可用。") : error);
 }
 
 void MemoTreeController::configureTreeView() {
@@ -151,6 +352,7 @@ void MemoTreeController::configureTreeView() {
     treeView->setUniformRowHeights(false);
     treeView->setMouseTracking(true);
     treeView->viewport()->setMouseTracking(true);
+    treeView->setContextMenuPolicy(Qt::CustomContextMenu);
     treeView->header()->setStretchLastSection(true);
     verticalScrollBar->attachTo(treeView);
 }

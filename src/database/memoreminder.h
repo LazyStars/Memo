@@ -17,7 +17,9 @@ struct MemoReminder {
     MemoReminderRepeatMode repeatMode = MemoReminderRepeatMode::Once;
     qint64 nextRemindAt = 0;           // 下次应触发提醒的时间戳
     qint64 lastRemindedAt = 0;         // 最近一次实际提醒时间戳
-    bool isEnabled = true;             // 是否启用该提醒配置
+    bool isEnabled = true;             // Whether this reminder is active.
+    bool autoUpdateStatus = false;     // Update status when the reminder starts.
+    bool urgeRepeatEnabled = false;    // Repeat overdue prompts when enabled.
     qint64 createdAt = 0;              // 创建时间戳
     qint64 updatedAt = 0;              // 最后更新时间戳
 };

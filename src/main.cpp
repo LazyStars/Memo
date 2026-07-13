@@ -5,6 +5,7 @@
 #include <qicon.h>
 #include <qdebug.h>
 #include <qfont.h>
+#include <qscreen.h>
 
 #include "app.h"
 #include "database/memodatabase.h"
@@ -60,6 +61,15 @@ int main(int argc, char* argv[]) {
     App app;
     app.setWindowTitle("备忘录");
     app.setWindowIcon(QIcon(":/res/logo.ico"));
+
+    QScreen *screen = QApplication::primaryScreen();
+    QRect screenGeometry = screen->availableGeometry();
+    int windowWidth = app.width();
+    int windowHeight = app.height();
+    int x = screenGeometry.width() - windowWidth - 24;
+    int y = 24;
+    app.move(x, y);
+
     app.show();
 
     return a.exec();

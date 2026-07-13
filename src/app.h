@@ -7,6 +7,7 @@
 #include "tools/tray/mysystemtrayicon.h"
 
 class MemoTreeController;
+class MemoReminderController;
 
 class App : public QWidget
 {
@@ -32,4 +33,5 @@ private:
     MySystemTrayIcon *trayIcon = nullptr;
     QTimer *updateTimer = nullptr;
     MemoTreeController* memoTreeController = nullptr;
+    MemoReminderController* memoReminderController = nullptr;
 };

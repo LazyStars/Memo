@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>548</width>
-    <height>353</height>
+    <width>594</width>
+    <height>412</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -170,7 +170,7 @@
 }</string>
         </property>
         <property name="currentIndex">
-         <number>0</number>
+         <number>1</number>
         </property>
         <widget class="QWidget" name="page_context">
          <layout class="QVBoxLayout" name="verticalLayout_4">
@@ -335,6 +335,33 @@ color: rgb(220, 220, 220);	</string>
            <number>0</number>
           </property>
           <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_12">
+            <item>
+             <widget class="QCheckBox" name="cb_update">
+              <property name="layoutDirection">
+               <enum>Qt::RightToLeft</enum>
+              </property>
+              <property name="text">
+               <string>是否自动更新状态</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <spacer name="horizontalSpacer_11">
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>40</width>
+                <height>20</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+           </layout>
+          </item>
+          <item>
            <layout class="QHBoxLayout" name="horizontalLayout_7">
             <property name="spacing">
              <number>0</number>
@@ -437,7 +464,7 @@ color: rgb(220, 220, 220);	</string>
                <enum>Qt::RightToLeft</enum>
               </property>
               <property name="text">
-               <string>是否重复提醒：</string>
+               <string>定时提醒是否重复提醒：</string>
               </property>
               <property name="tristate">
                <bool>false</bool>
@@ -473,6 +500,36 @@ color: rgb(220, 220, 220);	</string>
             </item>
             <item>
              <spacer name="horizontalSpacer_8">
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>40</width>
+                <height>20</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+           </layout>
+          </item>
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_13">
+            <item>
+             <widget class="QCheckBox" name="cb_repeat_urge">
+              <property name="layoutDirection">
+               <enum>Qt::RightToLeft</enum>
+              </property>
+              <property name="text">
+               <string>督促提醒是否重复提醒：</string>
+              </property>
+              <property name="tristate">
+               <bool>false</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <spacer name="horizontalSpacer_12">
               <property name="orientation">
                <enum>Qt::Horizontal</enum>
               </property>
@@ -589,11 +646,37 @@ color: rgb(220, 220, 220);	</string>
             </item>
             <item>
              <widget class="QComboBox" name="comboBox_state">
-              <item>
-               <property name="text">
-                <string>进行中</string>
-               </property>
-              </item>
+              <property name="styleSheet">
+               <string notr="true">.QComboBox{
+	border-radius: 8px;
+	background: transparent;
+	color: rgb(220, 220, 220);
+	padding: 2px 2px 2px 12px;
+	border: 1px solid rgb(220, 220, 220);
+}
+
+QComboBox QAbstractItemView{
+	background: #959595;
+    border:1px solid rgba(228,228,228,1);
+    border-radius:0px 0px 5px 5px;
+    outline: 0px;  
+}
+
+QComboBox QAbstractItemView::item{
+	height:36px;
+	color:rgb(220, 220, 220);
+	padding-left:8px;
+	background: transparent;
+}
+QComboBox QAbstractItemView::item:hover{ 
+  background-color:#409CE1;
+  color:#ffffff;
+}
+QComboBox QAbstractItemView::item:selected{
+  background-color:#409CE1;
+  color:#ffffff;
+}</string>
+              </property>
               <item>
                <property name="text">
                 <string>未开始</string>
@@ -601,12 +684,17 @@ color: rgb(220, 220, 220);	</string>
               </item>
               <item>
                <property name="text">
-                <string>已完成</string>
+                <string>计划中</string>
                </property>
               </item>
               <item>
                <property name="text">
-                <string>计划中</string>
+                <string>进行中</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>已完成</string>
                </property>
               </item>
               <item>

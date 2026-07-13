@@ -35,7 +35,9 @@ private slots:
     void on_comboBox_state_currentIndexChanged(int index);
     void on_cb_timing_toggled(bool checked);
     void on_cb_repeat_toggled(bool checked);
+    void on_cb_repeat_urge_toggled(bool checked);
     void on_cb_urge_toggled(bool checked);
+    void on_cb_update_toggled(bool checked);
     void on_lineEdit_timing_textChanged(const QString& text);
     void on_lineEdit_urge_textChanged(const QString& text);
 
@@ -48,6 +50,8 @@ private:
         bool reminderEnabled = false;
         int timingMinutes = 0;
         bool repeatEnabled = false;
+        bool autoUpdateStatus = false;
+        bool urgeRepeatEnabled = false;
         bool urgeEnabled = false;
         int urgeMinutes = 0;
     };

@@ -4,6 +4,7 @@
 #include <qcoreapplication.h>
 #include <qdir.h>
 #include <qlist.h>
+#include <qpair.h>
 #include <qsqlerror.h>
 #include <qsqlquery.h>
 #include <qstandardpaths.h>
@@ -101,6 +102,10 @@ bool MemoDatabase::createSchema() {
     }
 
     if (!createMemoReminderTable()) {
+        return false;
+    }
+
+    if (!ensureMemoReminderColumns()) {
         return false;
     }
 
@@ -214,6 +219,8 @@ bool MemoDatabase::createMemoReminderTable() {
             "next_remind_at INTEGER NOT NULL DEFAULT 0, "
             "last_reminded_at INTEGER NOT NULL DEFAULT 0, "
             "is_enabled INTEGER NOT NULL DEFAULT 1, "
+             "auto_update_status INTEGER NOT NULL DEFAULT 0, "
+             "urge_repeat_enabled INTEGER NOT NULL DEFAULT 0, "
             "created_at INTEGER NOT NULL, "
             "updated_at INTEGER NOT NULL, "
             "FOREIGN KEY(record_id) REFERENCES memo_record(id) ON DELETE CASCADE"
@@ -222,6 +229,28 @@ bool MemoDatabase::createMemoReminderTable() {
         return false;
     }
 
+    return true;
+}
+
+bool MemoDatabase::ensureMemoReminderColumns() {
+    const QList<QPair<QString, QString>> columns = {
+        {QStringLiteral("auto_update_status"), QStringLiteral("INTEGER NOT NULL DEFAULT 0")},
+        {QStringLiteral("urge_repeat_enabled"), QStringLiteral("INTEGER NOT NULL DEFAULT 0")}
+    };
+
+    for (const QPair<QString, QString>& column : columns) {
+        if (columnExists(QStringLiteral("memo_reminder"), column.first)) {
+            continue;
+        }
+
+        QSqlQuery query(db);
+        if (!query.exec(QStringLiteral("ALTER TABLE memo_reminder ADD COLUMN %1 %2").arg(column.first, column.second))) {
+            errorMessage = query.lastError().text();
+            return false;
+        }
+    }
+
+    errorMessage.clear();
     return true;
 }
 

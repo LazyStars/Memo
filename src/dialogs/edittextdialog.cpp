@@ -1,5 +1,6 @@
 #include "edittextdialog.h"
 
+#include <qlistview.h>
 #include <qevent.h>
 #include <qdatetime.h>
 #include <qmessagebox.h>
@@ -18,6 +19,7 @@ EditTextDialog::EditTextDialog(QWidget* parent) : QDialog(parent) {
     agent->setSystemButton(QWK::WindowAgentBase::Close, ui.btn_back);
     agent->setHitTestVisible(ui.btn_set, true);
 
+    ui.comboBox_state->setView(new QListView());
     ui.lineEdit_timing->setValidator(new QIntValidator(1, 525600, this));
     ui.lineEdit_urge->setValidator(new QIntValidator(1, 525600, this));
     ui.cb_popup->setVisible(false); // 暂未接入持久化能力，本次先隐藏
@@ -109,9 +111,19 @@ void EditTextDialog::on_cb_repeat_toggled(bool checked) {
     updateSavedState();
 }
 
+void EditTextDialog::on_cb_repeat_urge_toggled(bool checked) {
+    Q_UNUSED(checked)
+    updateSavedState();
+}
+
 void EditTextDialog::on_cb_urge_toggled(bool checked) {
     Q_UNUSED(checked)
     updateReminderWidgetsState();
+    updateSavedState();
+}
+
+void EditTextDialog::on_cb_update_toggled(bool checked) {
+    Q_UNUSED(checked)
     updateSavedState();
 }
 
@@ -171,6 +183,8 @@ void EditTextDialog::applyStateToUi(const DialogState& state) {
     const QSignalBlocker blockStatus(ui.comboBox_state);
     const QSignalBlocker blockTiming(ui.cb_timing);
     const QSignalBlocker blockRepeat(ui.cb_repeat);
+    const QSignalBlocker blockRepeatUrge(ui.cb_repeat_urge);
+    const QSignalBlocker blockUpdate(ui.cb_update);
     const QSignalBlocker blockUrge(ui.cb_urge);
     const QSignalBlocker blockTimingInput(ui.lineEdit_timing);
     const QSignalBlocker blockUrgeInput(ui.lineEdit_urge);
@@ -184,6 +198,8 @@ void EditTextDialog::applyStateToUi(const DialogState& state) {
     ui.comboBox_state->setCurrentIndex(comboIndexForStatus(state.status));
     ui.cb_timing->setChecked(state.reminderEnabled);
     ui.cb_repeat->setChecked(state.repeatEnabled);
+    ui.cb_repeat_urge->setChecked(state.urgeRepeatEnabled);
+    ui.cb_update->setChecked(state.autoUpdateStatus);
     ui.cb_urge->setChecked(state.urgeEnabled);
     ui.lineEdit_timing->setText(state.timingMinutes > 0 ? QString::number(state.timingMinutes) : QString());
     ui.lineEdit_urge->setText(state.urgeMinutes > 0 ? QString::number(state.urgeMinutes) : QString());
@@ -223,7 +239,9 @@ void EditTextDialog::updateReminderWidgetsState() {
 
     ui.widget->setEnabled(timingEnabled);
     ui.cb_repeat->setEnabled(timingEnabled);
+    ui.cb_update->setEnabled(timingEnabled);
     ui.cb_urge->setEnabled(timingEnabled);
+    ui.cb_repeat_urge->setEnabled(urgeEnabled);
     ui.widget_2->setEnabled(urgeEnabled);
 }
 
@@ -350,6 +368,8 @@ bool EditTextDialog::buildCurrentOutput(MemoRecord* record, MemoReminder* remind
     const bool timingChanged = currentState.reminderEnabled != lastSavedState.reminderEnabled
                                || currentState.timingMinutes != lastSavedState.timingMinutes
                                || currentState.repeatEnabled != lastSavedState.repeatEnabled
+                               || currentState.autoUpdateStatus != lastSavedState.autoUpdateStatus
+                               || currentState.urgeRepeatEnabled != lastSavedState.urgeRepeatEnabled
                                || currentState.urgeEnabled != lastSavedState.urgeEnabled
                                || currentState.urgeMinutes != lastSavedState.urgeMinutes;
     const qint64 now = QDateTime::currentSecsSinceEpoch();
@@ -376,10 +396,12 @@ bool EditTextDialog::buildCurrentOutput(MemoRecord* record, MemoReminder* remind
 
         nextReminder.recordId = sourceRecord.id;
         nextReminder.finishWithinSeconds = finishWithinSeconds;
+        nextReminder.autoUpdateStatus = currentState.autoUpdateStatus;
+        nextReminder.urgeRepeatEnabled = currentState.urgeRepeatEnabled;
         nextReminder.repeatMode = currentState.repeatEnabled
                                       ? MemoReminderRepeatMode::Repeat
                                       : MemoReminderRepeatMode::Once;
-        nextReminder.remindIntervalSeconds = currentState.repeatEnabled
+        nextReminder.remindIntervalSeconds = (currentState.repeatEnabled || currentState.urgeRepeatEnabled)
                                                  ? qMax<qint64>(
                                                        60,
                                                        currentState.urgeEnabled && currentState.urgeMinutes > 0
@@ -416,6 +438,8 @@ bool EditTextDialog::buildCurrentOutput(MemoRecord* record, MemoReminder* remind
         nextReminder.finishWithinSeconds = 0;
         nextReminder.remindIntervalSeconds = 0;
         nextReminder.repeatMode = MemoReminderRepeatMode::Once;
+        nextReminder.autoUpdateStatus = false;
+        nextReminder.urgeRepeatEnabled = false;
         nextReminder.nextRemindAt = 0;
         nextReminder.lastRemindedAt = 0;
         nextReminder.isEnabled = false;
@@ -440,6 +464,8 @@ EditTextDialog::DialogState EditTextDialog::collectStateFromUi() const {
     state.reminderEnabled = ui.cb_timing->isChecked();
     state.timingMinutes = state.reminderEnabled ? ui.lineEdit_timing->text().toInt() : 0;
     state.repeatEnabled = state.reminderEnabled && ui.cb_repeat->isChecked();
+    state.autoUpdateStatus = state.reminderEnabled && ui.cb_update->isChecked();
+    state.urgeRepeatEnabled = state.reminderEnabled && ui.cb_urge->isChecked() && ui.cb_repeat_urge->isChecked();
     state.urgeEnabled = state.reminderEnabled && ui.cb_urge->isChecked();
     state.urgeMinutes = state.urgeEnabled ? ui.lineEdit_urge->text().toInt() : 0;
     return state;
@@ -462,6 +488,8 @@ EditTextDialog::DialogState EditTextDialog::stateFromData(const MemoRecord& reco
                                   : 0;
         state.repeatEnabled = reminder->repeatMode == MemoReminderRepeatMode::Repeat
                               && reminder->remindIntervalSeconds > 0;
+        state.autoUpdateStatus = reminder->autoUpdateStatus;
+        state.urgeRepeatEnabled = reminder->urgeRepeatEnabled;
         const qint64 urgeLeadSeconds = reminder->dueAt > reminder->startRemindAt
                                            ? reminder->dueAt - reminder->startRemindAt
                                            : 0;
@@ -482,6 +510,8 @@ bool EditTextDialog::statesMatch(const DialogState& lhs, const DialogState& rhs)
            && lhs.reminderEnabled == rhs.reminderEnabled
            && lhs.timingMinutes == rhs.timingMinutes
            && lhs.repeatEnabled == rhs.repeatEnabled
+           && lhs.autoUpdateStatus == rhs.autoUpdateStatus
+           && lhs.urgeRepeatEnabled == rhs.urgeRepeatEnabled
            && lhs.urgeEnabled == rhs.urgeEnabled
            && lhs.urgeMinutes == rhs.urgeMinutes;
 }

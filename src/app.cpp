@@ -1,5 +1,6 @@
 #include "app.h"
 #include "utils/treeview/memotreecontroller.h"
+#include "utils/reminder/memoremindercontroller.h"
 
 #include <qdatetime.h>
 #include <QWKWidgets/widgetwindowagent.h>
@@ -30,12 +31,19 @@ void App::initializeControl() {
 void App::initializeTreeView() {
     memoTreeController = new MemoTreeController(ui.treeView, this);
     memoTreeController->initialize();
+    memoReminderController = new MemoReminderController(trayIcon, this, this);
+    connect(memoReminderController, &MemoReminderController::reminderDataChanged,
+            memoTreeController, &MemoTreeController::refresh);
 }
 
 void App::startRealTimeTimer() {
     updateTimer = new QTimer(this);
     updateTimer->callOnTimeout([this] {
-        ui.label_date->setText(QDateTime::currentDateTime().toString("yyyy-MM-dd dddd HH:mm:ss"));
+        const QDateTime currentDateTime = QDateTime::currentDateTime();
+        ui.label_date->setText(currentDateTime.toString("yyyy-MM-dd dddd HH:mm:ss"));
+        if (memoReminderController != nullptr) {
+            memoReminderController->processDueReminders(currentDateTime.toSecsSinceEpoch());
+        }
     });
     updateTimer->start(1000);
 }

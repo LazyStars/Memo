@@ -23,6 +23,7 @@ private:
     bool createMemoRecordTable();
     bool createMemoReminderTable();
     bool ensureMemoRecordGroupIdColumn();
+    bool ensureMemoReminderColumns();
     bool ensureSingleDefaultGroup(qint64* defaultGroupId);
     bool backfillRecordsToDefaultGroup(qint64 defaultGroupId);
     bool createIndexes();

@@ -74,6 +74,73 @@ bool MemoRepository::updateGroup(const MemoGroup& group) {
     return query.numRowsAffected() > 0;
 }
 
+bool MemoRepository::deleteGroup(qint64 groupId) {
+    MemoRepository& repository = instance();
+    if (groupId <= 0) {
+        repository.errorMessage = "Memo group id is invalid.";
+        return false;
+    }
+
+    if (!repository.ensureDatabaseReady()) {
+        return false;
+    }
+
+    QSqlDatabase database = MemoDatabase::database();
+    if (!database.transaction()) {
+        repository.errorMessage = database.lastError().text();
+        return false;
+    }
+
+    QSqlQuery activeRecordQuery(database);
+    activeRecordQuery.prepare("SELECT 1 FROM memo_record WHERE group_id = :group_id AND deleted = 0 LIMIT 1");
+    activeRecordQuery.bindValue(":group_id", groupId);
+    if (!activeRecordQuery.exec()) {
+        repository.errorMessage = activeRecordQuery.lastError().text();
+        (void)database.rollback();
+        return false;
+    }
+
+    if (activeRecordQuery.next()) {
+        repository.errorMessage = "Memo group contains active records.";
+        (void)database.rollback();
+        return false;
+    }
+
+    // Deleted records no longer belong in a removed group. Deleting them also cascades reminders.
+    QSqlQuery removeDeletedRecordsQuery(database);
+    removeDeletedRecordsQuery.prepare("DELETE FROM memo_record WHERE group_id = :group_id AND deleted = 1");
+    removeDeletedRecordsQuery.bindValue(":group_id", groupId);
+    if (!removeDeletedRecordsQuery.exec()) {
+        repository.errorMessage = removeDeletedRecordsQuery.lastError().text();
+        (void)database.rollback();
+        return false;
+    }
+
+    QSqlQuery removeGroupQuery(database);
+    removeGroupQuery.prepare("DELETE FROM memo_group WHERE id = :group_id");
+    removeGroupQuery.bindValue(":group_id", groupId);
+    if (!removeGroupQuery.exec()) {
+        repository.errorMessage = removeGroupQuery.lastError().text();
+        (void)database.rollback();
+        return false;
+    }
+
+    if (removeGroupQuery.numRowsAffected() != 1) {
+        repository.errorMessage = "Memo group was not found.";
+        (void)database.rollback();
+        return false;
+    }
+
+    if (!database.commit()) {
+        repository.errorMessage = database.lastError().text();
+        (void)database.rollback();
+        return false;
+    }
+
+    repository.errorMessage.clear();
+    return true;
+}
+
 bool MemoRepository::getDefaultGroup(MemoGroup* group) {
     MemoRepository& repository = instance();
     if (group == nullptr) {
@@ -216,6 +283,63 @@ bool MemoRepository::updateRecord(const MemoRecord& record) {
     return query.numRowsAffected() > 0;
 }
 
+bool MemoRepository::deleteRecord(qint64 recordId, qint64 deletedAt) {
+    MemoRepository& repository = instance();
+    if (recordId <= 0 || deletedAt <= 0) {
+        repository.errorMessage = "Memo record id or deleted timestamp is invalid.";
+        return false;
+    }
+
+    if (!repository.ensureDatabaseReady()) {
+        return false;
+    }
+
+    QSqlDatabase database = MemoDatabase::database();
+    if (!database.transaction()) {
+        repository.errorMessage = database.lastError().text();
+        return false;
+    }
+
+    QSqlQuery deleteRecordQuery(database);
+    deleteRecordQuery.prepare(
+        "UPDATE memo_record SET deleted = 1, updated_at = :updated_at "
+        "WHERE id = :id AND deleted = 0");
+    deleteRecordQuery.bindValue(":id", recordId);
+    deleteRecordQuery.bindValue(":updated_at", deletedAt);
+    if (!deleteRecordQuery.exec()) {
+        repository.errorMessage = deleteRecordQuery.lastError().text();
+        (void)database.rollback();
+        return false;
+    }
+
+    if (deleteRecordQuery.numRowsAffected() != 1) {
+        repository.errorMessage = "Memo record was not found.";
+        (void)database.rollback();
+        return false;
+    }
+
+    QSqlQuery disableReminderQuery(database);
+    disableReminderQuery.prepare(
+        "UPDATE memo_reminder SET is_enabled = 0, updated_at = :updated_at "
+        "WHERE record_id = :record_id");
+    disableReminderQuery.bindValue(":record_id", recordId);
+    disableReminderQuery.bindValue(":updated_at", deletedAt);
+    if (!disableReminderQuery.exec()) {
+        repository.errorMessage = disableReminderQuery.lastError().text();
+        (void)database.rollback();
+        return false;
+    }
+
+    if (!database.commit()) {
+        repository.errorMessage = database.lastError().text();
+        (void)database.rollback();
+        return false;
+    }
+
+    repository.errorMessage.clear();
+    return true;
+}
+
 bool MemoRepository::getRecordById(qint64 id, MemoRecord* record) {
     MemoRepository& repository = instance();
     if (record == nullptr) {
@@ -294,11 +418,11 @@ bool MemoRepository::addReminder(const MemoReminder& reminder, qint64* insertedI
         "INSERT INTO memo_reminder ("
         "record_id, start_remind_at, due_at, finish_within_seconds, "
         "remind_interval_seconds, repeat_mode, next_remind_at, "
-        "last_reminded_at, is_enabled, created_at, updated_at"
+        "last_reminded_at, is_enabled, auto_update_status, urge_repeat_enabled, created_at, updated_at"
         ") VALUES ("
         ":record_id, :start_remind_at, :due_at, :finish_within_seconds, "
         ":remind_interval_seconds, :repeat_mode, :next_remind_at, "
-        ":last_reminded_at, :is_enabled, :created_at, :updated_at)"
+        ":last_reminded_at, :is_enabled, :auto_update_status, :urge_repeat_enabled, :created_at, :updated_at)"
     );
     query.bindValue(":record_id", reminder.recordId);
     query.bindValue(":start_remind_at", reminder.startRemindAt);
@@ -309,6 +433,8 @@ bool MemoRepository::addReminder(const MemoReminder& reminder, qint64* insertedI
     query.bindValue(":next_remind_at", reminder.nextRemindAt);
     query.bindValue(":last_reminded_at", reminder.lastRemindedAt);
     query.bindValue(":is_enabled", reminder.isEnabled ? 1 : 0);
+    query.bindValue(":auto_update_status", reminder.autoUpdateStatus ? 1 : 0);
+    query.bindValue(":urge_repeat_enabled", reminder.urgeRepeatEnabled ? 1 : 0);
     query.bindValue(":created_at", reminder.createdAt);
     query.bindValue(":updated_at", reminder.updatedAt);
 
@@ -343,6 +469,8 @@ bool MemoRepository::updateReminder(const MemoReminder& reminder) {
         "next_remind_at = :next_remind_at, "
         "last_reminded_at = :last_reminded_at, "
         "is_enabled = :is_enabled, "
+        "auto_update_status = :auto_update_status, "
+        "urge_repeat_enabled = :urge_repeat_enabled, "
         "updated_at = :updated_at "
         "WHERE record_id = :record_id"
     );
@@ -355,6 +483,8 @@ bool MemoRepository::updateReminder(const MemoReminder& reminder) {
     query.bindValue(":next_remind_at", reminder.nextRemindAt);
     query.bindValue(":last_reminded_at", reminder.lastRemindedAt);
     query.bindValue(":is_enabled", reminder.isEnabled ? 1 : 0);
+    query.bindValue(":auto_update_status", reminder.autoUpdateStatus ? 1 : 0);
+    query.bindValue(":urge_repeat_enabled", reminder.urgeRepeatEnabled ? 1 : 0);
     query.bindValue(":updated_at", reminder.updatedAt);
 
     if (!query.exec()) {
@@ -382,7 +512,7 @@ bool MemoRepository::getReminderByRecordId(qint64 recordId, MemoReminder* remind
     query.prepare(
         "SELECT id, record_id, start_remind_at, due_at, finish_within_seconds, "
         "remind_interval_seconds, repeat_mode, next_remind_at, "
-        "last_reminded_at, is_enabled, created_at, updated_at "
+        "last_reminded_at, is_enabled, auto_update_status, urge_repeat_enabled, created_at, updated_at "
         "FROM memo_reminder WHERE record_id = :record_id"
     );
     query.bindValue(":record_id", recordId);
@@ -414,7 +544,7 @@ QList<MemoReminder> MemoRepository::listEnabledReminders() {
     if (!query.exec(
             "SELECT id, record_id, start_remind_at, due_at, finish_within_seconds, "
             "remind_interval_seconds, repeat_mode, next_remind_at, "
-            "last_reminded_at, is_enabled, created_at, updated_at "
+            "last_reminded_at, is_enabled, auto_update_status, urge_repeat_enabled, created_at, updated_at "
             "FROM memo_reminder WHERE is_enabled = 1 "
             "ORDER BY next_remind_at ASC, id ASC")) {
         repository.errorMessage = query.lastError().text();
@@ -487,6 +617,8 @@ MemoReminder MemoRepository::mapReminderFromQuery(const QSqlQuery& query) const 
     reminder.nextRemindAt = query.value("next_remind_at").toLongLong();
     reminder.lastRemindedAt = query.value("last_reminded_at").toLongLong();
     reminder.isEnabled = query.value("is_enabled").toInt() != 0;
+    reminder.autoUpdateStatus = query.value("auto_update_status").toInt() != 0;
+    reminder.urgeRepeatEnabled = query.value("urge_repeat_enabled").toInt() != 0;
     reminder.createdAt = query.value("created_at").toLongLong();
     reminder.updatedAt = query.value("updated_at").toLongLong();
     return reminder;

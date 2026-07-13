@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.12)
 
-project(memo  VERSION 1.0.1)
+project(memo  VERSION 1.0.2)
 
 include(${EXTRAL_PKG_DIR}/MyDepsConfig.cmake)
 
@@ -17,6 +17,18 @@ find_package(QWindowKit COMPONENTS Core Widgets REQUIRED)
 add_compile_definitions(CUR_PROJECT_PATH="${CMAKE_CURRENT_SOURCE_DIR}")
 add_compile_definitions(APP_VERSION="v${PROJECT_VERSION}")
 
+include(${CMAKE_CURRENT_LIST_DIR}/generate_rc.cmake)
+if (${CMAKE_BUILD_TYPE} STREQUAL "Release")
+    generate_rc(RC_FILE ${CMAKE_CURRENT_SOURCE_DIR}/res
+            NAME Memo
+            VERSION ${PROJECT_VERSION}  #产品版本
+            COMPANY_NAME YeXiaobai    #公司名称
+            FILE_DESCRIPTION Memo       #文件说明
+            ICON_PATH D:/Memo/src/res/logo.ico
+    )
+    message("RC file generated at: ${RC_FILE}")
+endif()
+
 add_executable(${PROJECT_NAME} WIN32
         main.cpp
 
@@ -24,6 +36,7 @@ add_executable(${PROJECT_NAME} WIN32
         app.h
         app.ui
         app.qrc
+        ${RC_FILE}
 
         dialogs/edittextdialog.h
         dialogs/edittextdialog.cpp
@@ -53,6 +66,12 @@ add_executable(${PROJECT_NAME} WIN32
         utils/treeview/item/recorditem.cpp
         utils/treeview/item/groupitem.h
         utils/treeview/item/groupitem.cpp
+
+        utils/menu/memomenu.h
+        utils/menu/memomenu.cpp
+
+        utils/reminder/memoremindercontroller.h
+        utils/reminder/memoremindercontroller.cpp
 )
 
 target_link_libraries(${PROJECT_NAME}
