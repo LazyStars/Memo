@@ -40,9 +40,17 @@ void MemoReminderController::processReminder(MemoReminder reminder, qint64 curre
         return;
     }
 
-    const bool hasDueReminder = reminder.startRemindAt > 0
-                                && reminder.dueAt > reminder.startRemindAt;
+    const bool hasDueReminder = reminder.dueAt > 0;
     if (hasDueReminder && currentTimestamp >= reminder.dueAt) {
+        if (reminder.autoUpdateStatus) {
+            if (!completeRecord(record.id, currentTimestamp)) {
+                return;
+            }
+
+            showDueNotification(record, groupNameForRecord(record.groupId));
+            return;
+        }
+
         const bool isFirstDueReminder = reminder.lastRemindedAt < reminder.dueAt;
         const bool isRepeatedDueReminder = reminder.urgeRepeatEnabled
                                            && reminder.remindIntervalSeconds > 0
@@ -77,7 +85,6 @@ void MemoReminderController::processReminder(MemoReminder reminder, qint64 curre
         return;
     }
 
-    showStartNotification(record, groupNameForRecord(record.groupId));
     if (isFirstStartReminder && reminder.autoUpdateStatus) {
         record.status = MemoStatus::InProgress;
         record.updatedAt = currentTimestamp;
@@ -87,8 +94,12 @@ void MemoReminderController::processReminder(MemoReminder reminder, qint64 curre
         }
     }
 
+    showStartNotification(record, groupNameForRecord(record.groupId));
+
     reminder.lastRemindedAt = currentTimestamp;
-    if (reminder.repeatMode == MemoReminderRepeatMode::Repeat
+    if (reminder.autoUpdateStatus && hasDueReminder) {
+        reminder.nextRemindAt = reminder.dueAt;
+    } else if (reminder.repeatMode == MemoReminderRepeatMode::Repeat
         && record.status != MemoStatus::InProgress) {
         reminder.nextRemindAt = currentTimestamp + reminder.remindIntervalSeconds;
     } else if (hasDueReminder) {
@@ -153,7 +164,7 @@ void MemoReminderController::showDueReminder(const MemoRecord& record, const QSt
     connect(messageBox, &QMessageBox::buttonClicked, this,
             [this, recordId = record.id, completeButton](QAbstractButton* button) {
         if (button == completeButton) {
-            completeRecord(recordId);
+            (void)completeRecord(recordId, QDateTime::currentSecsSinceEpoch());
         }
     });
     connect(messageBox, &QObject::destroyed, this, [this, recordId = record.id] {
@@ -167,25 +178,40 @@ void MemoReminderController::showDueReminder(const MemoRecord& record, const QSt
     messageBox->open();
 }
 
-void MemoReminderController::completeRecord(qint64 recordId) {
-    MemoRecord record;
-    if (!MemoRepository::getRecordById(recordId, &record) || record.deleted) {
+void MemoReminderController::showDueNotification(const MemoRecord& record, const QString& groupName) {
+    if (trayIcon == nullptr) {
         return;
     }
 
-    const qint64 now = QDateTime::currentSecsSinceEpoch();
+    trayIcon->showMessage(QStringLiteral("督促提醒"),
+                          QStringLiteral("%1 - %2 的预计完成时间已到达。")
+                              .arg(groupName, record.title),
+                          QSystemTrayIcon::Information,
+                          5000);
+}
+
+bool MemoReminderController::completeRecord(qint64 recordId, qint64 currentTimestamp) {
+    MemoRecord record;
+    if (!MemoRepository::getRecordById(recordId, &record) || record.deleted) {
+        return false;
+    }
+
     record.status = MemoStatus::Completed;
-    record.completedAt = now;
-    record.updatedAt = now;
+    record.completedAt = currentTimestamp;
+    record.updatedAt = currentTimestamp;
     if (!MemoRepository::updateRecord(record)) {
-        return;
+        return false;
     }
 
     MemoReminder reminder;
     if (MemoRepository::getReminderByRecordId(recordId, &reminder)) {
-        (void)disableReminder(&reminder, now);
+        if (reminder.isEnabled && !disableReminder(&reminder, currentTimestamp)) {
+            return false;
+        }
     }
+
     Q_EMIT reminderDataChanged();
+    return true;
 }
 
 QString MemoReminderController::groupNameForRecord(qint64 groupId) const {

@@ -344,6 +344,9 @@ color: rgb(220, 220, 220);	</string>
               <property name="text">
                <string>是否自动更新状态</string>
               </property>
+              <property name="checked">
+               <bool>true</bool>
+              </property>
              </widget>
             </item>
             <item>
@@ -426,6 +429,9 @@ color: rgb(220, 220, 220);	</string>
                </item>
                <item>
                 <widget class="QLineEdit" name="lineEdit_timing">
+                 <property name="text">
+                  <string>1</string>
+                 </property>
                  <property name="alignment">
                   <set>Qt::AlignCenter</set>
                  </property>
@@ -457,7 +463,8 @@ color: rgb(220, 220, 220);	</string>
            </widget>
           </item>
           <item>
-           <layout class="QHBoxLayout" name="horizontalLayout_8">
+           <widget class="QWidget" name="widget_repeat">
+            <layout class="QHBoxLayout" name="horizontalLayout_8">
             <item>
              <widget class="QCheckBox" name="cb_repeat">
               <property name="layoutDirection">
@@ -484,7 +491,8 @@ color: rgb(220, 220, 220);	</string>
               </property>
              </spacer>
             </item>
-           </layout>
+            </layout>
+           </widget>
           </item>
           <item>
            <layout class="QHBoxLayout" name="horizontalLayout_9">
@@ -514,7 +522,8 @@ color: rgb(220, 220, 220);	</string>
            </layout>
           </item>
           <item>
-           <layout class="QHBoxLayout" name="horizontalLayout_13">
+           <widget class="QWidget" name="widget_repeat_urge">
+            <layout class="QHBoxLayout" name="horizontalLayout_13">
             <item>
              <widget class="QCheckBox" name="cb_repeat_urge">
               <property name="layoutDirection">
@@ -541,7 +550,8 @@ color: rgb(220, 220, 220);	</string>
               </property>
              </spacer>
             </item>
-           </layout>
+            </layout>
+           </widget>
           </item>
           <item>
            <widget class="QWidget" name="widget_2" native="true">
@@ -578,6 +588,9 @@ color: rgb(220, 220, 220);	</string>
                </item>
                <item>
                 <widget class="QLineEdit" name="lineEdit_urge">
+                 <property name="text">
+                  <string>1</string>
+                 </property>
                  <property name="alignment">
                   <set>Qt::AlignCenter</set>
                  </property>

@@ -30,7 +30,8 @@ private:
     bool disableReminder(MemoReminder* reminder, qint64 currentTimestamp);
     void showStartNotification(const MemoRecord& record, const QString& groupName);
     void showDueReminder(const MemoRecord& record, const QString& groupName);
-    void completeRecord(qint64 recordId);
+    void showDueNotification(const MemoRecord& record, const QString& groupName);
+    bool completeRecord(qint64 recordId, qint64 currentTimestamp);
     QString groupNameForRecord(qint64 groupId) const;
 
 private:

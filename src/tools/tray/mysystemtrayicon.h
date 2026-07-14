@@ -11,6 +11,8 @@ public:
 
 private:
     void createTrayMenu();
+    bool setAppAutoRun(bool isEnabled);
+    bool isAppAutoRunEnabled() const;
 
 private slots:
     void onIconActivated(QSystemTrayIcon::ActivationReason reason);

@@ -9,8 +9,8 @@ IDI_ICON1               ICON                    "D:/Memo/src/res/logo.ico"
 
 //
 VS_VERSION_INFO VERSIONINFO
-FILEVERSION 1.0.2.0
-PRODUCTVERSION 1.0.2.0
+FILEVERSION 1.0.3.0
+PRODUCTVERSION 1.0.3.0
 FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
     FILEFLAGS VS_FF_DEBUG
@@ -28,12 +28,12 @@ BEGIN
         //公司名称、文件描述、文件版本、法律版权、原始文件名、产品名称、产品版本、评论、合法商标、内部名
             VALUE "CompanyName", "YeXiaobai"
             VALUE "FileDescription", "Memo (x64)"
-            VALUE "FileVersion", "1.0.2.0"
+            VALUE "FileVersion", "1.0.3.0"
             VALUE "LegalCopyright", "Copyright \xA9 2026 YeXiaobai"
             VALUE "OriginalFilename", "Memo"
             VALUE "ProductName", "Memo"
-            VALUE "ProductVersion", "1.0.2.0"
-            VALUE "Comments", "Memo v1.0.2"
+            VALUE "ProductVersion", "1.0.3.0"
+            VALUE "Comments", "Memo v1.0.3"
             VALUE "LegalTrademarks", ""
             VALUE "InternalName", "Memo"
         END

@@ -124,6 +124,7 @@ void EditTextDialog::on_cb_urge_toggled(bool checked) {
 
 void EditTextDialog::on_cb_update_toggled(bool checked) {
     Q_UNUSED(checked)
+    updateReminderWidgetsState();
     updateSavedState();
 }
 
@@ -235,13 +236,20 @@ void EditTextDialog::updateTitleCounter() {
 
 void EditTextDialog::updateReminderWidgetsState() {
     const bool timingEnabled = ui.cb_timing->isChecked();
-    const bool urgeEnabled = timingEnabled && ui.cb_urge->isChecked();
+    const bool urgeEnabled = ui.cb_urge->isChecked();
+    const bool automaticStatusEnabled = ui.cb_update->isChecked();
+
+    if (automaticStatusEnabled) {
+        const QSignalBlocker blockRepeat(ui.cb_repeat);
+        const QSignalBlocker blockRepeatUrge(ui.cb_repeat_urge);
+        ui.cb_repeat->setChecked(false);
+        ui.cb_repeat_urge->setChecked(false);
+    }
 
     ui.widget->setEnabled(timingEnabled);
-    ui.cb_repeat->setEnabled(timingEnabled);
-    ui.cb_update->setEnabled(timingEnabled);
-    ui.cb_urge->setEnabled(timingEnabled);
-    ui.cb_repeat_urge->setEnabled(urgeEnabled);
+    ui.comboBox_state->setEnabled(!automaticStatusEnabled);
+    ui.widget_repeat->setVisible(!automaticStatusEnabled);
+    ui.widget_repeat_urge->setVisible(!automaticStatusEnabled);
     ui.widget_2->setEnabled(urgeEnabled);
 }
 
@@ -314,30 +322,14 @@ bool EditTextDialog::tryCloseByUser() {
 }
 
 bool EditTextDialog::validateBeforeLeavingSettingsPage() {
-    if (!ui.cb_timing->isChecked()) {
-        return true;
-    }
-
-    const int timingMinutes = ui.lineEdit_timing->text().toInt();
-    if (timingMinutes <= 0) {
+    if (ui.cb_timing->isChecked() && ui.lineEdit_timing->text().toInt() <= 0) {
         QMessageBox::warning(this, QStringLiteral("提示"), QStringLiteral("请填写有效的提醒时间。"));
         ui.lineEdit_timing->setFocus();
         return false;
     }
 
-    if (!ui.cb_urge->isChecked()) {
-        return true;
-    }
-
-    const int urgeMinutes = ui.lineEdit_urge->text().toInt();
-    if (urgeMinutes <= 0) {
+    if (ui.cb_urge->isChecked() && ui.lineEdit_urge->text().toInt() <= 0) {
         QMessageBox::warning(this, QStringLiteral("提示"), QStringLiteral("请填写有效的督促提醒时间。"));
-        ui.lineEdit_urge->setFocus();
-        return false;
-    }
-
-    if (urgeMinutes > timingMinutes) {
-        QMessageBox::warning(this, QStringLiteral("提示"), QStringLiteral("督促提醒时间不能大于提醒时间。"));
         ui.lineEdit_urge->setFocus();
         return false;
     }
@@ -378,35 +370,40 @@ bool EditTextDialog::buildCurrentOutput(MemoRecord* record, MemoReminder* remind
     nextRecord.title = currentState.title;
     nextRecord.contentHtml = currentState.contentHtml;
     nextRecord.contentPlain = currentState.contentPlain;
-    nextRecord.status = currentState.status;
+    const bool hasStartReminder = currentState.reminderEnabled;
+    const bool hasDueReminder = currentState.urgeEnabled;
+    const bool hasReminder = hasStartReminder || hasDueReminder;
+    const bool automaticStatusEnabled = hasReminder && currentState.autoUpdateStatus;
+    nextRecord.status = automaticStatusEnabled ? MemoStatus::Planned : currentState.status;
     nextRecord.updatedAt = now;
-    if (currentState.status == MemoStatus::Completed) {
+    if (nextRecord.status == MemoStatus::Completed) {
         nextRecord.completedAt = sourceRecord.completedAt > 0 ? sourceRecord.completedAt : now;
     } else {
         nextRecord.completedAt = 0;
     }
 
     MemoReminder nextReminder = sourceReminder;
-    const qint64 finishWithinSeconds = minutesToSeconds(currentState.timingMinutes);
-    if (currentState.reminderEnabled) {
-        nextRecord.planDelaySeconds = finishWithinSeconds;
-        nextRecord.planDueAt = reminderExisted && !timingChanged && sourceRecord.planDueAt > 0
-                               ? sourceRecord.planDueAt
-                               : now + finishWithinSeconds;
+    const qint64 startDelaySeconds = minutesToSeconds(currentState.timingMinutes);
+    const qint64 finishWithinSeconds = minutesToSeconds(currentState.urgeMinutes);
+    if (hasReminder) {
+        nextRecord.planDelaySeconds = hasStartReminder ? startDelaySeconds : 0;
 
         nextReminder.recordId = sourceRecord.id;
-        nextReminder.finishWithinSeconds = finishWithinSeconds;
+        nextReminder.finishWithinSeconds = hasDueReminder ? finishWithinSeconds : 0;
         nextReminder.autoUpdateStatus = currentState.autoUpdateStatus;
-        nextReminder.urgeRepeatEnabled = currentState.urgeRepeatEnabled;
-        nextReminder.repeatMode = currentState.repeatEnabled
+        nextReminder.urgeRepeatEnabled = automaticStatusEnabled
+                                             ? false
+                                             : hasDueReminder && currentState.urgeRepeatEnabled;
+        nextReminder.repeatMode = !automaticStatusEnabled && hasStartReminder
+                                      && currentState.repeatEnabled
                                       ? MemoReminderRepeatMode::Repeat
                                       : MemoReminderRepeatMode::Once;
-        nextReminder.remindIntervalSeconds = (currentState.repeatEnabled || currentState.urgeRepeatEnabled)
+        nextReminder.remindIntervalSeconds = !automaticStatusEnabled
+                                             && ((hasStartReminder && currentState.repeatEnabled)
+                                                 || (hasDueReminder && currentState.urgeRepeatEnabled))
                                                  ? qMax<qint64>(
                                                        60,
-                                                       currentState.urgeEnabled && currentState.urgeMinutes > 0
-                                                           ? minutesToSeconds(currentState.urgeMinutes)
-                                                           : finishWithinSeconds)
+                                                       hasDueReminder ? finishWithinSeconds : startDelaySeconds)
                                                  : 0;
         nextReminder.isEnabled = true;
         nextReminder.updatedAt = now;
@@ -414,19 +411,24 @@ bool EditTextDialog::buildCurrentOutput(MemoRecord* record, MemoReminder* remind
             nextReminder.createdAt = now;
         }
 
-        if (reminderExisted && !timingChanged && sourceReminder.dueAt > 0) {
+        if (reminderExisted && !timingChanged) {
             nextReminder.startRemindAt = sourceReminder.startRemindAt;
             nextReminder.dueAt = sourceReminder.dueAt;
             nextReminder.nextRemindAt = sourceReminder.nextRemindAt;
             nextReminder.lastRemindedAt = sourceReminder.lastRemindedAt;
+            nextRecord.planDueAt = sourceRecord.planDueAt;
         } else {
-            const qint64 urgeLeadSeconds = currentState.urgeEnabled ? minutesToSeconds(currentState.urgeMinutes) : 0;
-            nextReminder.dueAt = nextRecord.planDueAt;
-            nextReminder.startRemindAt = urgeLeadSeconds > 0
-                                             ? qMax(now, nextRecord.planDueAt - urgeLeadSeconds)
-                                             : nextRecord.planDueAt;
-            nextReminder.nextRemindAt = nextReminder.startRemindAt;
+            nextReminder.startRemindAt = hasStartReminder ? now + startDelaySeconds : 0;
+            nextReminder.dueAt = hasDueReminder
+                                     ? (nextReminder.startRemindAt > 0
+                                            ? nextReminder.startRemindAt + finishWithinSeconds
+                                            : now + finishWithinSeconds)
+                                     : 0;
+            nextReminder.nextRemindAt = nextReminder.startRemindAt > 0
+                                         ? nextReminder.startRemindAt
+                                         : nextReminder.dueAt;
             nextReminder.lastRemindedAt = 0;
+            nextRecord.planDueAt = nextReminder.dueAt;
         }
     } else {
         nextRecord.planDelaySeconds = 0;
@@ -451,7 +453,7 @@ bool EditTextDialog::buildCurrentOutput(MemoRecord* record, MemoReminder* remind
 
     *record = nextRecord;
     *reminder = nextReminder;
-    persistReminder = currentState.reminderEnabled || reminderExisted;
+    persistReminder = hasReminder || reminderExisted;
     return true;
 }
 
@@ -462,12 +464,12 @@ EditTextDialog::DialogState EditTextDialog::collectStateFromUi() const {
     state.contentPlain = ui.textEdit->toPlainText();
     state.status = statusForComboIndex(ui.comboBox_state->currentIndex());
     state.reminderEnabled = ui.cb_timing->isChecked();
-    state.timingMinutes = state.reminderEnabled ? ui.lineEdit_timing->text().toInt() : 0;
-    state.repeatEnabled = state.reminderEnabled && ui.cb_repeat->isChecked();
-    state.autoUpdateStatus = state.reminderEnabled && ui.cb_update->isChecked();
-    state.urgeRepeatEnabled = state.reminderEnabled && ui.cb_urge->isChecked() && ui.cb_repeat_urge->isChecked();
-    state.urgeEnabled = state.reminderEnabled && ui.cb_urge->isChecked();
-    state.urgeMinutes = state.urgeEnabled ? ui.lineEdit_urge->text().toInt() : 0;
+    state.timingMinutes = ui.lineEdit_timing->text().toInt();
+    state.autoUpdateStatus = ui.cb_update->isChecked();
+    state.repeatEnabled = ui.cb_repeat->isChecked();
+    state.urgeRepeatEnabled = ui.cb_repeat_urge->isChecked();
+    state.urgeEnabled = ui.cb_urge->isChecked();
+    state.urgeMinutes = ui.lineEdit_urge->text().toInt();
     return state;
 }
 
@@ -479,24 +481,28 @@ EditTextDialog::DialogState EditTextDialog::stateFromData(const MemoRecord& reco
     state.status = record.status;
 
     if (reminder != nullptr && reminder->isEnabled) {
-        state.reminderEnabled = true;
-        const qint64 finishWithinSeconds = record.planDelaySeconds > 0
-                                               ? record.planDelaySeconds
-                                               : reminder->finishWithinSeconds;
-        state.timingMinutes = finishWithinSeconds > 0
-                                  ? static_cast<int>(qMax<qint64>(1, (finishWithinSeconds + 59) / 60))
-                                  : 0;
+        state.reminderEnabled = reminder->startRemindAt > 0;
+        state.urgeEnabled = reminder->dueAt > 0
+                            && (reminder->startRemindAt == 0
+                                || reminder->dueAt > reminder->startRemindAt);
+        const qint64 startDelaySeconds = record.planDelaySeconds;
+        if (startDelaySeconds > 0) {
+            state.timingMinutes = static_cast<int>(qMax<qint64>(
+                1, (startDelaySeconds + 59) / 60));
+        }
         state.repeatEnabled = reminder->repeatMode == MemoReminderRepeatMode::Repeat
                               && reminder->remindIntervalSeconds > 0;
         state.autoUpdateStatus = reminder->autoUpdateStatus;
         state.urgeRepeatEnabled = reminder->urgeRepeatEnabled;
-        const qint64 urgeLeadSeconds = reminder->dueAt > reminder->startRemindAt
-                                           ? reminder->dueAt - reminder->startRemindAt
-                                           : 0;
-        state.urgeEnabled = urgeLeadSeconds > 0;
-        state.urgeMinutes = urgeLeadSeconds > 0
-                                ? static_cast<int>(qMax<qint64>(1, (urgeLeadSeconds + 59) / 60))
-                                : 0;
+        if (state.urgeEnabled) {
+            const qint64 finishWithinSeconds = reminder->startRemindAt > 0
+                                                   ? reminder->dueAt - reminder->startRemindAt
+                                                   : reminder->finishWithinSeconds;
+            if (finishWithinSeconds > 0) {
+                state.urgeMinutes = static_cast<int>(qMax<qint64>(
+                    1, (finishWithinSeconds + 59) / 60));
+            }
+        }
     }
 
     return state;

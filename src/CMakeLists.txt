@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.12)
 
-project(memo  VERSION 1.0.2)
+project(memo  VERSION 1.0.3)
 
 include(${EXTRAL_PKG_DIR}/MyDepsConfig.cmake)
 

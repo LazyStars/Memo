@@ -48,12 +48,12 @@ private:
         QString contentPlain;
         MemoStatus status = MemoStatus::NotStarted;
         bool reminderEnabled = false;
-        int timingMinutes = 0;
+        int timingMinutes = 1;
         bool repeatEnabled = false;
         bool autoUpdateStatus = false;
         bool urgeRepeatEnabled = false;
         bool urgeEnabled = false;
-        int urgeMinutes = 0;
+        int urgeMinutes = 1;
     };
 
     void closeEvent(QCloseEvent* event) override;
