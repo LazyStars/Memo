@@ -71,9 +71,9 @@ void App::on_btn_add_record_clicked() {
 }
 
 void App::on_btn_hide_clicked() {
-    hide();
+    showMinimized();
 }
 
 void App::on_btn_close_clicked() {
-    close();
+    hide();
 }
